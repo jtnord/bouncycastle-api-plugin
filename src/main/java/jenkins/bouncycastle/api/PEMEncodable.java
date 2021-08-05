@@ -36,12 +36,12 @@ import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
-import org.bouncycastle.openssl.jcajce.JceOpenSSLPKCS8DecryptorProviderBuilder;
 import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
 import org.bouncycastle.operator.InputDecryptorProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo;
 import org.bouncycastle.pkcs.PKCSException;
+import org.bouncycastle.pkcs.jcajce.JcePKCSPBEInputDecryptorProviderBuilder;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -179,7 +179,7 @@ public final class PEMEncodable {
             // handle supported PEM formats.
             if (object instanceof PEMEncryptedKeyPair) {
                 if (passphrase != null) {
-                    PEMDecryptorProvider dp = new JcePEMDecryptorProviderBuilder().build(passphrase);
+                    PEMDecryptorProvider dp = new JcePEMDecryptorProviderBuilder().setProvider(BOUNCY_CASTLE_PROVIDER).build(passphrase);
                     PEMEncryptedKeyPair ekp = (PEMEncryptedKeyPair) object;
                     return new PEMEncodable(kConv.getKeyPair(ekp.decryptKeyPair(dp)));
                 } else {
@@ -187,7 +187,7 @@ public final class PEMEncodable {
                 }
             } else if (object instanceof PKCS8EncryptedPrivateKeyInfo) {
                 if (passphrase != null) {
-                    InputDecryptorProvider dp = new JceOpenSSLPKCS8DecryptorProviderBuilder().build(passphrase);
+                    InputDecryptorProvider dp = new JcePKCSPBEInputDecryptorProviderBuilder().setProvider(BOUNCY_CASTLE_PROVIDER).build(passphrase);
                     PKCS8EncryptedPrivateKeyInfo epk = (PKCS8EncryptedPrivateKeyInfo) object;
                     return new PEMEncodable(kConv.getPrivateKey(epk.decryptPrivateKeyInfo(dp)));
                 } else {
@@ -218,8 +218,6 @@ public final class PEMEncodable {
                         "Could not parse PEM, only key pairs, private keys, public keys and certificates are supported. Received "
                                 + object.getClass().getName());
             }
-        } catch (OperatorCreationException e) {
-            throw new IOException(e.getMessage(), e);
         } catch (PKCSException | InvalidKeySpecException e) {
             LOGGER.log(Level.WARNING, "Could not read PEM encrypted information", e);
             throw new UnrecoverableKeyException();
